@@ -79,7 +79,7 @@
     <Compile Include="Protobuf\ProtobufGen.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\ExcelReader.cs" />
+    <Compile Include="Excel\ExcelReader.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
