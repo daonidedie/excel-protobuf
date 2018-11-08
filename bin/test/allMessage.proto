@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+import "t_prop.proto";
+
+message allMessage {
+	t_propContainer propContainer = 1;
+}

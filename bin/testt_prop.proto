@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+message t_propContainer {
+	map<int32,t_prop> container = 1;
+}
+
+message t_prop {
+	int32 id = 1;
+	int32 name = 2;
+	int32 type = 3;
+	int32 toplimit = 4;
+	int32 quality = 5;
+	repeated int32 value = 6;
+	string icon = 7;
+	int32 desc = 8;
+}
