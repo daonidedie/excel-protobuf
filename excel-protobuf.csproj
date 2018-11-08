@@ -7,8 +7,8 @@
     <ProjectGuid>{9057F6D9-D1D0-4901-B8F7-0664D6CBB2D4}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ConfigTool</RootNamespace>
-    <AssemblyName>ConfigTool</AssemblyName>
+    <RootNamespace>ExcelProtobuf</RootNamespace>
+    <AssemblyName>execl-protobuf</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

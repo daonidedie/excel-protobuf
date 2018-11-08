@@ -142,7 +142,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         string path = Path.Combine(protoPath, ALL_CONFIG_NAME + PROTO_SUFFIX);
         FileStream file = File.Create(path);
         byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
-        file.Write(bytes, 0 , bytes.Length);
+        file.Write(bytes, 0, bytes.Length);
         file.Close();
     }
 
@@ -304,9 +304,9 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
     private void GenDataManager(ExcelData excelData, string outputPath, string package)
     {
         if (_isOutputCSharp)
-            ConfigTool.CSharp.CSharpGenerator.GenDataManager(excelData, outputPath);
+            CSharpGenerator.GenDataManager(excelData, outputPath);
         else if (!string.IsNullOrEmpty(package))
-            ConfigTool.Java.JavaGenerator.GenDataManager(excelData, outputPath, package);
+            JavaGenerator.GenDataManager(excelData, outputPath, package);
     }
 
     //清理临时文件
@@ -340,7 +340,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         while (index > 0)
         {
             index += 1;
-            string c = nsp.Substring(index,  1).ToUpper();
+            string c = nsp.Substring(index, 1).ToUpper();
             nsp = nsp.Remove(index, 1);
             nsp = nsp.Insert(index, c);
             index = nsp.IndexOf('.', index);
@@ -354,7 +354,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         if (outputPath.Contains(OPTION_CSHARP_OUT_DIR)) _tag = "c#";
         else if (outputPath.Contains(OPTION_JAVA_OUT_DIR)) _tag = "java";
 
-        for (int i = excelData.tableList.Count - 1; i>= 0; --i)
+        for (int i = excelData.tableList.Count - 1; i >= 0; --i)
         {
             TableData table = excelData.tableList[i];
             bool isExist = false;
