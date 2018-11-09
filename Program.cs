@@ -40,7 +40,7 @@ class Program
                 }
             }
         }
-        try
+        try 
         {
             ExcelData data = ExcelReader.ReadAll(excelPath);
             ProtobufGen.inst.Gen(data, protoPath, outputPath, binaryPath, package);
