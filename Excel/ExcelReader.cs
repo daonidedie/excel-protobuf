@@ -15,15 +15,15 @@ public class FieldData
     /// <summary>
     /// 变量类型
     /// </summary>
-    public string Type;
+    public string type;
     /// <summary>
     /// 变量名称
     /// </summary>
-    public string Name;
+    public string name;
     /// <summary>
     /// 数据内容
     /// </summary>
-    public string Data;
+    public string data;
 }
 
 /// <summary>
@@ -133,7 +133,10 @@ public static class ExcelReader
             //读取每行数据
             Dictionary<int, string[]> dataDict = ReadRowData(excelReader);
             //获取变量声明
-            tableData.tableDeclare = GetVariableDeclare(dataDict[EXPORT_TAG_ROW], dataDict[FIELD_TYPE_ROW], dataDict[FIELD_NAME_ROW]);
+            string[] tags = null; dataDict.TryGetValue(EXPORT_TAG_ROW, out tags);
+            string[] types = null; dataDict.TryGetValue(FIELD_TYPE_ROW, out types);
+            string[] names = null; dataDict.TryGetValue(FIELD_NAME_ROW, out names);
+            tableData.tableDeclare = GetVariableDeclare(tags, types, names);
             tableData.tableName = excelReader.Name;
             tableData.idTypeName = GetIdTypeName(tableData.tableDeclare);
 
@@ -149,9 +152,9 @@ public static class ExcelReader
                     VariableDeclare declare = tableData.tableDeclare[i];
                     FieldData data = new FieldData()
                     {
-                        Type = declare.type,
-                        Name = declare.name,
-                        Data = values[i],
+                        type = declare.type,
+                        name = declare.name,
+                        data = values[i],
                     };
                     datas[i] = data;
                 }
@@ -172,16 +175,14 @@ public static class ExcelReader
     /// <returns></returns>
     private static List<VariableDeclare> GetVariableDeclare(string[] tags, string[] types, string[] names)
     {
-        if (types.Length != names.Length)
-            throw new Exception("类型和变量名列数不匹配");
         List<VariableDeclare> list = new List<VariableDeclare>();
-        for (int i = 0; i < types.Length; ++i)
+        for (int i = 0; i < types?.Length || i < tags?.Length || i < names?.Length; ++i)
         {
             VariableDeclare declare = new VariableDeclare()
             {
-                type = types[i],
-                name = names[i],
-                tag = tags[i],
+                type = i < types?.Length ? types[i] : null,
+                name = i < names?.Length ? names[i] : null,
+                tag = i < tags?.Length ? tags[i] : null,
             };
             list.Add(declare);
         }
@@ -193,7 +194,7 @@ public static class ExcelReader
         for (int i = 0; i < declareList.Count; ++i)
         {
             VariableDeclare declare = declareList[i];
-            if (declare.name.Equals(ProtobufGen.ID_NAME))
+            if (!string.IsNullOrEmpty(declare.name) && declare.name.Equals(ProtobufGen.ID_NAME))
                 return declare.type;
         }
         return null;

@@ -27,6 +27,8 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
     private const string PROTO_SUFFIX = ".proto";
     //二进制文件后缀名
     private const string BINARY_SUFFIX = ".bytes";
+    //枚举tag
+    private const string ENUM_TAG = "enum";
 
     //C#脚本输出目录 选项
     private const string OPTION_CSHARP_OUT_DIR = "--csharp_out";
@@ -37,14 +39,17 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
     private bool _isOutputCSharp = false;
     //当前的tag
     private string _tag;
+    //枚举类型字典
+    private Dictionary<string, List<string>> _enumDict = new Dictionary<string, List<string>>();
 
     public void Gen(ExcelData data, string protoPath, string outputPath, string binaryPath, string package)
     {
+        GenEnumProto(data, protoPath, package);
         CheckTag(data, outputPath);
         for (int i = 0; i < data.tableList.Count; ++i)
         {
             TableData table = data.tableList[i];
-            string code = GenProto(table, protoPath, outputPath, package);
+            string code = GenMessageProto(table, protoPath, outputPath, package);
             byte[] bytes = Encoding.UTF8.GetBytes(code);
             string fileName = Path.Combine(protoPath, table.tableName + PROTO_SUFFIX);
             FileStream fs = new FileStream(fileName, FileMode.Create, FileAccess.Write);
@@ -63,15 +68,8 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         ClearTemp(path);
     }
 
-    //设置tag
-    private void SetTag(string outputPath)
-    {
-        if (outputPath.Contains(OPTION_CSHARP_OUT_DIR)) _tag = "c#";
-        else if (outputPath.Contains(OPTION_JAVA_OUT_DIR)) _tag = "java";
-    }
-
-    //生成.proto文件
-    private string GenProto(TableData table, string protoPath, string outputPath, string package)
+    //生成Message .proto文件
+    private string GenMessageProto(TableData table, string protoPath, string outputPath, string package)
     {
         //获取id索引的类型
         StringBuilder sb = new StringBuilder();
@@ -83,6 +81,13 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
             sb.AppendLine("package " + package + ";");
             sb.AppendLine();
         }
+
+        //引用
+        foreach (string name in _enumDict.Keys)
+        {
+            sb.AppendLine(string.Format("import \"{0}{1}\";", name, ProtobufGen.PROTO_SUFFIX));
+        }
+        sb.AppendLine();
 
         //Container
         sb.AppendLine(string.Format(@"message {0} {1}", table.tableName + CONTAINER_NAME_EXTEND, "{"));
@@ -97,12 +102,75 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         for (int i = 0; i < table.tableDeclare.Count; ++i)
         {
             TableData.VariableDeclare declare = table.tableDeclare[i];
-            if (declare.tag.Contains(_tag))
+            if (!string.IsNullOrEmpty(declare.tag) 
+                && declare.tag.Contains(_tag)
+                && !string.IsNullOrEmpty(declare.type)
+                && !string.IsNullOrEmpty(declare.name))
                 sb.AppendLine(string.Format("\t{0} {1} = {2};", declare.type, declare.name, index++));
         }
 
         sb.AppendLine("}");
         return sb.ToString();
+    }
+
+    //生成枚举 .proto文件
+    private void GenEnumProto(ExcelData excelData, string protoPath, string package)
+    {
+        //筛选出所有枚举类型的表
+        List<TableData> _enumTableList = new List<TableData>();
+        for (int i = excelData.tableList.Count - 1; i >= 0 ; --i)
+        {
+            TableData table = excelData.tableList[i];
+            string tag = table.tableDeclare[0].tag;
+            if (string.IsNullOrEmpty(tag) || !tag.Equals(ENUM_TAG)) continue;
+
+            _enumTableList.Add(table);
+            excelData.tableList.RemoveAt(i);
+        }
+
+        if (_enumTableList.Count == 0) return;
+
+        for (int i = 0; i < _enumTableList.Count; ++i)
+        {
+            TableData table = _enumTableList[i];
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("syntax = \"proto3\";");
+            sb.AppendLine();
+            //包名
+            if (!string.IsNullOrEmpty(package))
+            {
+                sb.AppendLine("package " + package + ";");
+                sb.AppendLine();
+            }
+            for (int j = 0; j < table.rowDatas.Count; ++j)
+            {
+                FieldData[] fields = table.rowDatas[i];
+                string enumName = fields[0].data;
+                sb.AppendLine(string.Format("enum {0} {1}", enumName, "{"));
+                sb.AppendLine("\tUNKOWN = 0;");
+                for (int k = 1; k < fields.Length; ++k)
+                {
+                    sb.AppendLine(string.Format("\t{0} = {1};"
+                        , fields[k].data , k));
+                }
+                sb.AppendLine("}");
+
+                List<string> list = null;
+                if (!_enumDict.TryGetValue(table.tableName, out list))
+                {
+                    list = new List<string>();
+                    _enumDict.Add(table.tableName, list);
+                }
+                list.Add(enumName);
+            }
+
+            byte[] bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            string fileName = Path.Combine(protoPath, table.tableName + PROTO_SUFFIX);
+            FileStream fs = new FileStream(fileName, FileMode.Create, FileAccess.Write);
+            fs.Write(bytes, 0, bytes.Length);
+            fs.Close();
+        }
     }
 
     //生成一个汇总的proto文件
@@ -217,10 +285,10 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
                 {
                     FieldData data = datas[j];
                     //首字母大写
-                    FieldInfo field = configType.GetField(data.Name + "_", BindingFlags.Instance | BindingFlags.NonPublic);
+                    FieldInfo field = configType.GetField(data.name + "_", BindingFlags.Instance | BindingFlags.NonPublic);
                     if (field == null) continue;
-                    object value = GetFieldData(data);
-                    if (data.Name.Equals("id")) id = value;
+                    object value = GetFieldData(data, assembly, nsp);
+                    if (data.name.Equals("id")) id = value;
                     field.SetValue(config, value);
                 }
                 //添加进入容器
@@ -242,39 +310,43 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
     }
 
     //获取每个类型的值
-    private object GetFieldData(FieldData data)
+    private object GetFieldData(FieldData data, Assembly assembly, string namespaceName)
     {
         try
         {
-            switch (data.Type)
+            switch (data.type)
             {
-                case SupportType.INT: return int.Parse(data.Data);
-                case SupportType.FLOAT: return float.Parse(data.Data);
-                case SupportType.STRING: return data.Data;
+                case SupportType.INT: return int.Parse(data.data);
+                case SupportType.FLOAT: return float.Parse(data.data);
+                case SupportType.STRING: return data.data;
                 case SupportType.LIST_INT:
                     RepeatedField<int> repeatedInt = new RepeatedField<int>();
-                    string[] intStr = data.Data.Split(';');
+                    string[] intStr = data.data.Split(';');
                     for (int i = 0; i < intStr.Length; ++i)
                         repeatedInt.Add(int.Parse(intStr[i]));
                     return repeatedInt;
                 case SupportType.LIST_FLOAT:
                     RepeatedField<float> repeatedFloat = new RepeatedField<float>();
-                    string[] floatStr = data.Data.Split(';');
+                    string[] floatStr = data.data.Split(';');
                     for (int i = 0; i < floatStr.Length; ++i)
                         repeatedFloat.Add(float.Parse(floatStr[i]));
                     return repeatedFloat;
                 case SupportType.LIST_STRING:
                     RepeatedField<string> repeatedString = new RepeatedField<string>();
-                    repeatedString.AddRange(data.Data.Split(';'));
+                    repeatedString.AddRange(data.data.Split(';'));
                     return repeatedString;
                 default:
-                    throw new Exception("不匹配的类型 : " + data.Type);
-            }
+                    string typeName = namespaceName + data.type;
+                    Type enumType = assembly.GetType(typeName);
+                    if (enumType != null) return Enum.Parse(enumType, data.data);
+                    throw new Exception("不匹配的类型 : " + typeName);
+            } 
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
         }
+        
         return null;
     }
 
@@ -361,7 +433,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
             for (int j = 0; j < table.tableDeclare.Count; ++j)
             {
                 VariableDeclare declare = table.tableDeclare[j];
-                if (declare.tag.Contains(_tag))
+                if (!string.IsNullOrEmpty(declare.tag) && declare.tag.Contains(_tag))
                 {
                     isExist = true;
                     break;
