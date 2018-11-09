@@ -82,13 +82,9 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
             sb.AppendLine();
         }
 
-        //引用
-        foreach (string name in _enumDict.Keys)
-        {
-            sb.AppendLine(string.Format("import \"{0}{1}\";", name, ProtobufGen.PROTO_SUFFIX));
-        }
-        sb.AppendLine();
-
+        //枚举需要插入的位置
+        int enumIndex = sb.Length;
+      
         //Container
         sb.AppendLine(string.Format(@"message {0} {1}", table.tableName + CONTAINER_NAME_EXTEND, "{"));
         sb.AppendLine(string.Format("\tmap<{0},{1}> {2} = 1;", table.idTypeName, table.tableName, CONTAINER_VARIABLE_NAME));
@@ -98,15 +94,39 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         //message
         sb.AppendLine(string.Format(@"message {0} {1}", table.tableName, "{"));
 
+        //引用的枚举类型列表
+        List<string> listEnum = new List<string>();
         int index = 1;
         for (int i = 0; i < table.tableDeclare.Count; ++i)
         {
             TableData.VariableDeclare declare = table.tableDeclare[i];
-            if (!string.IsNullOrEmpty(declare.tag) 
-                && declare.tag.Contains(_tag)
-                && !string.IsNullOrEmpty(declare.type)
-                && !string.IsNullOrEmpty(declare.name))
-                sb.AppendLine(string.Format("\t{0} {1} = {2};", declare.type, declare.name, index++));
+
+            //判定字段
+            if (string.IsNullOrEmpty(declare.tag) 
+                || !declare.tag.Contains(_tag)
+                || string.IsNullOrEmpty(declare.type)
+                || string.IsNullOrEmpty(declare.name)) continue;
+
+            sb.AppendLine(string.Format("\t{0} {1} = {2};", declare.type, declare.name, index++));
+            foreach (KeyValuePair<string, List<string>> each in _enumDict)
+            {
+                foreach (string item in each.Value)
+                {
+                    if (declare.type.Equals(item) && !listEnum.Contains(each.Key))
+                    {
+                        listEnum.Add(each.Key);
+                        break;
+                    }
+                }
+            }
+        }
+
+        //引用枚举
+        for (int i = 0; i < listEnum.Count; ++i)
+        {
+            string import = string.Format("import \"{0}{1}\";\r\n", listEnum[i], ProtobufGen.PROTO_SUFFIX);
+            sb.Insert(enumIndex, import);
+            index += import.Length;
         }
 
         sb.AppendLine("}");
@@ -118,7 +138,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
     {
         //筛选出所有枚举类型的表
         List<TableData> _enumTableList = new List<TableData>();
-        for (int i = excelData.tableList.Count - 1; i >= 0 ; --i)
+        for (int i = excelData.tableList.Count - 1; i >= 0; --i)
         {
             TableData table = excelData.tableList[i];
             string tag = table.tableDeclare[0].tag;
@@ -145,14 +165,13 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
             }
             for (int j = 0; j < table.rowDatas.Count; ++j)
             {
-                FieldData[] fields = table.rowDatas[i];
+                FieldData[] fields = table.rowDatas[j];
                 string enumName = fields[0].data;
                 sb.AppendLine(string.Format("enum {0} {1}", enumName, "{"));
-                sb.AppendLine("\tUNKOWN = 0;");
                 for (int k = 1; k < fields.Length; ++k)
                 {
-                    sb.AppendLine(string.Format("\t{0} = {1};"
-                        , fields[k].data , k));
+                    sb.AppendLine(string.Format("\t{0}_{1} = {2};"
+                        , enumName, fields[k].data, k - 1));
                 }
                 sb.AppendLine("}");
 
@@ -217,6 +236,10 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
     //生成脚本
     private void GenScript(string protoPath, string type, string path)
     {
+        //清理文件
+        string[] files = Directory.GetFiles(path, "*.cs");
+        for (int i = 0; i < files.Length; ++i)
+            File.Delete(files[i]);
         ProcessStartInfo pStartInfo = new ProcessStartInfo("protoc.exe")//设置进程
         {
             CreateNoWindow = false,
@@ -227,7 +250,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         };
 
         string format = @"{0} -I={1} {2}={3}";
-        string[] files = Directory.GetFiles(protoPath, "*.proto");
+        files = Directory.GetFiles(protoPath, "*.proto");
         for (int i = 0; i < files.Length; ++i)
         {
             string file = files[i];
@@ -340,13 +363,13 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
                     Type enumType = assembly.GetType(typeName);
                     if (enumType != null) return Enum.Parse(enumType, data.data);
                     throw new Exception("不匹配的类型 : " + typeName);
-            } 
+            }
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
         }
-        
+
         return null;
     }
 

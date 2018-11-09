@@ -14,7 +14,7 @@
     <ProjectView>ProjectFiles</ProjectView>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
-    <StartArguments>--proto_path=../test --excel_path=../test --binary_path=../test --java_out=../test</StartArguments>
+    <StartArguments>--proto_path=../test --excel_path=../test --binary_path=../test --csharp_out=../test</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <StartArguments>--proto_path=../test --excel_path=../test --binary_path=../test --java_out=../test</StartArguments>
