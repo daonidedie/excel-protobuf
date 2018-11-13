@@ -44,6 +44,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
 
     public void Gen(ExcelData data, string protoPath, string outputPath, string binaryPath, string package)
     {
+        ClearProto(protoPath);
         GenEnumProto(data, protoPath, package);
         CheckTag(data, outputPath);
         for (int i = 0; i < data.tableList.Count; ++i)
@@ -66,6 +67,14 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         GenBinary(data, path, binaryPath, GetNamespaceByPackage(package));
         GenDataManager(data, path, package);
         ClearTemp(path);
+    }
+
+    //清理proto文件
+    private void ClearProto(string protoPath)
+    {
+        string[] protos = Directory.GetFiles(protoPath, "*.proto");
+        for (int i = 0; i < protos.Length; ++i)
+            File.Delete(protos[i]);
     }
 
     //生成Message .proto文件
@@ -170,8 +179,10 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
                 sb.AppendLine(string.Format("enum {0} {1}", enumName, "{"));
                 for (int k = 1; k < fields.Length; ++k)
                 {
+                    string field = fields[k].data;
+                    if (string.IsNullOrEmpty(field)) continue;
                     sb.AppendLine(string.Format("\t{0}_{1} = {2};"
-                        , enumName, fields[k].data, k - 1));
+                        , enumName, field, k - 1));
                 }
                 sb.AppendLine("}");
 
