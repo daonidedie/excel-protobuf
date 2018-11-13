@@ -84,6 +84,7 @@ public class SupportType
     public const string INT = "int32";
     public const string FLOAT = "float";
     public const string STRING = "string";
+    public const string BOOLEAN = "bool";
     public const string LIST_INT = "repeated int32";
     public const string LIST_FLOAT = "repeated float";
     public const string LIST_STRING = "repeated string";
@@ -129,7 +130,7 @@ public static class ExcelReader
             FileStream stream = File.Open(tablePath, FileMode.Open, FileAccess.Read);
             IExcelDataReader excelReader = ExcelReaderFactory.CreateOpenXmlReader(stream);
             if (!excelReader.IsValid) throw new Exception("无法打开文件");
-
+            if (string.IsNullOrEmpty(excelReader.Name)) throw new Exception("缺少表名");
             //读取每行数据
             Dictionary<int, string[]> dataDict = ReadRowData(excelReader);
             //获取变量声明

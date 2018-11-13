@@ -307,39 +307,46 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
             Type containerType = assembly.GetType(containerName);
             object container = Activator.CreateInstance(containerType);
 
-            //创建数据对象,并添加入容器
-            Type configType = assembly.GetType(nsp + tableData.tableName);
-            for (int i = 0; i < tableData.rowDatas.Count; ++i)
+            try
             {
-                //每行的数据
-                FieldData[] datas = tableData.rowDatas[i];
-                object config = Activator.CreateInstance(configType);
-                object id = null;
-                for (int j = 0; j < datas.Length; ++j)
+                //创建数据对象,并添加入容器
+                Type configType = assembly.GetType(nsp + tableData.tableName);
+                for (int i = 0; i < tableData.rowDatas.Count; ++i)
                 {
-                    FieldData data = datas[j];
-                    //首字母大写
-                    FieldInfo field = configType.GetField(data.name + "_", BindingFlags.Instance | BindingFlags.NonPublic);
-                    if (field == null) continue;
-                    object value = GetFieldData(data, assembly, nsp);
-                    if (data.name.Equals("id")) id = value;
-                    field.SetValue(config, value);
+                    //每行的数据
+                    FieldData[] datas = tableData.rowDatas[i];
+                    object config = Activator.CreateInstance(configType);
+                    object id = null;
+                    for (int j = 0; j < datas.Length; ++j)
+                    {
+                        FieldData data = datas[j];
+                        //首字母大写
+                        FieldInfo field = configType.GetField(data.name + "_", BindingFlags.Instance | BindingFlags.NonPublic);
+                        if (field == null) continue;
+                        object value = GetFieldData(data, assembly, nsp);
+                        if (data.name.Equals("id")) id = value;
+                        field.SetValue(config, value);
+                    }
+                    //添加进入容器
+                    FieldInfo fieldContainer = containerType.GetField(CONTAINER_VARIABLE_NAME + "_", BindingFlags.Instance | BindingFlags.NonPublic);
+                    object map = fieldContainer.GetValue(container);
+                    fieldContainer.FieldType.GetMethod("Add", new Type[] { id.GetType(), configType }).Invoke(map, new object[] { id, config });
                 }
-                //添加进入容器
-                FieldInfo fieldContainer = containerType.GetField(CONTAINER_VARIABLE_NAME + "_", BindingFlags.Instance | BindingFlags.NonPublic);
-                object map = fieldContainer.GetValue(container);
-                fieldContainer.FieldType.GetMethod("Add", new Type[] { id.GetType(), configType }).Invoke(map, new object[] { id, config });
-            }
 
-            //序列化成二进制文件
-            string path = Path.Combine(binaryPath, tableData.tableName + BINARY_SUFFIX);
-            FileStream file = File.Create(path);
-            using (CodedOutputStream cos = new CodedOutputStream(file))
-            {
-                containerType.GetMethod("WriteTo").Invoke(container, new object[] { cos });
-                cos.Flush();
+                //序列化成二进制文件
+                string path = Path.Combine(binaryPath, tableData.tableName + BINARY_SUFFIX);
+                FileStream file = File.Create(path);
+                using (CodedOutputStream cos = new CodedOutputStream(file))
+                {
+                    containerType.GetMethod("WriteTo").Invoke(container, new object[] { cos });
+                    cos.Flush();
+                }
+                file.Close();
             }
-            file.Close();
+            catch (Exception e)
+            {
+                throw new Exception(e + "  in " + tableData.tableName);
+            }
         }
     }
 
@@ -352,7 +359,8 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
             {
                 case SupportType.INT: return int.Parse(data.data);
                 case SupportType.FLOAT: return float.Parse(data.data);
-                case SupportType.STRING: return data.data;
+                case SupportType.STRING: return string.IsNullOrEmpty(data.data) ?  string.Empty : data.data;
+                case SupportType.BOOLEAN: return bool.Parse(data.data);
                 case SupportType.LIST_INT:
                     RepeatedField<int> repeatedInt = new RepeatedField<int>();
                     string[] intStr = data.data.Split(';');

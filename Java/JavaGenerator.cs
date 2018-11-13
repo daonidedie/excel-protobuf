@@ -35,7 +35,7 @@ public class JavaGenerator
             string name = table.tableName.Substring(2);
             name = Util.InitialToUpper(name);
             sb.AppendLine(string.Format("\t\t{0}({1}){2}"
-                , name, i == 0 ? 1 : i * 2, i == excelData.tableList.Count - 1 ? ";" : ","));
+                , name, i == 0 ? 1 : Math.Pow(2, i), i == excelData.tableList.Count - 1 ? ";" : ","));
         }
         sb.AppendLine("\t\tpublic int value;");
         sb.AppendLine();
