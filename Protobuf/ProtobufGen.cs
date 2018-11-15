@@ -355,6 +355,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
     //protobuf生成的字段名是没有下划线的
     private string GetFieldName(string name)
     {
+        if (string.IsNullOrEmpty(name)) return string.Empty;
         string[] splitName = name.Split('_');
         string fieldName = splitName[0];
         for (int i = 1; i < splitName.Length; i++)
