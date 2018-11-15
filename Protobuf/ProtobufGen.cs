@@ -321,8 +321,9 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
                     {
                         FieldData data = datas[j];
                         //首字母大写
-                        FieldInfo field = configType.GetField(data.name + "_", BindingFlags.Instance | BindingFlags.NonPublic);
+                        FieldInfo field = configType.GetField(GetFieldName(data.name), BindingFlags.Instance | BindingFlags.NonPublic);
                         if (field == null) continue;
+
                         object value = GetFieldData(data, assembly, nsp);
                         if (data.name.Equals("id")) id = value;
                         field.SetValue(config, value);
@@ -348,6 +349,20 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
                 throw new Exception(e + "  in " + tableData.tableName);
             }
         }
+    }
+
+    //获取字段名,根据Protobuf的规则
+    //protobuf生成的字段名是没有下划线的
+    private string GetFieldName(string name)
+    {
+        string[] splitName = name.Split('_');
+        string fieldName = splitName[0];
+        for (int i = 1; i < splitName.Length; i++)
+        {
+            fieldName += Util.InitialToUpper(splitName[i]);
+        }
+        fieldName += "_";
+        return fieldName;
     }
 
     //获取每个类型的值
