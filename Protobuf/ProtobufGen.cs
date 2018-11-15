@@ -150,7 +150,7 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
         for (int i = excelData.tableList.Count - 1; i >= 0; --i)
         {
             TableData table = excelData.tableList[i];
-            string tag = table.tableDeclare[0].tag;
+            string tag = table.tableDeclare?[0].tag;
             if (string.IsNullOrEmpty(tag) || !tag.Equals(ENUM_TAG)) continue;
 
             _enumTableList.Add(table);
