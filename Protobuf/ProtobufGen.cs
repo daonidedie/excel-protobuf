@@ -379,18 +379,24 @@ class ProtobufGen : SingletonTemplate<ProtobufGen>
                 case SupportType.BOOLEAN: return bool.Parse(data.data);
                 case SupportType.LIST_INT:
                     RepeatedField<int> repeatedInt = new RepeatedField<int>();
+                    if (string.IsNullOrEmpty(data.data))
+                        return repeatedInt;
                     string[] intStr = data.data.Split(';');
                     for (int i = 0; i < intStr.Length; ++i)
                         repeatedInt.Add(int.Parse(intStr[i]));
                     return repeatedInt;
                 case SupportType.LIST_FLOAT:
                     RepeatedField<float> repeatedFloat = new RepeatedField<float>();
+                    if (string.IsNullOrEmpty(data.data))
+                        return repeatedFloat;
                     string[] floatStr = data.data.Split(';');
                     for (int i = 0; i < floatStr.Length; ++i)
                         repeatedFloat.Add(float.Parse(floatStr[i]));
                     return repeatedFloat;
                 case SupportType.LIST_STRING:
                     RepeatedField<string> repeatedString = new RepeatedField<string>();
+                    if (string.IsNullOrEmpty(data.data))
+                        return repeatedString;
                     repeatedString.AddRange(data.data.Split(';'));
                     return repeatedString;
                 default:
