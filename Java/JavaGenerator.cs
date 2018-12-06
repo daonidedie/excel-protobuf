@@ -83,7 +83,23 @@ public class JavaGenerator
         sb.AppendLine("\t}");
         sb.AppendLine();
 
-        //获取config函数
+        //获取单个config函数
+        for (int i = 0; i < excelData.tableList.Count; i++)
+        {
+            TableData table = excelData.tableList[i];
+            string className = TableNameToClassName(table.tableName);
+            string containerName = table.tableName.Substring(2) + ProtobufGen.CONTAINER_NAME_EXTEND;
+            sb.AppendLine(string.Format("\tpublic {0} {1}({2} id) {3}"
+                , className + "." + table.tableName
+                , "get" + Util.InitialToUpper(table.tableName.Substring(2))
+                , GetJavaTypeName(table.idTypeName)
+                , "{"));
+            sb.AppendLine(string.Format("\t\treturn {0}.getContainerMap().get(id);", containerName));
+            sb.AppendLine("\t}");
+            sb.AppendLine();
+        }
+
+        //获取所有config函数
         string outerName = Util.InitialToUpper(ProtobufGen.ALL_CONFIG_NAME) + "." + ProtobufGen.ALL_CONFIG_NAME;
         sb.AppendLine(string.Format("\tpublic {0} GetConfig(int configType) {1}"
             , outerName, "{"));
@@ -151,4 +167,15 @@ public class JavaGenerator
         fs.Close();
     }
 
+    private static string GetJavaTypeName(string typeName)
+    {
+        switch (typeName)
+        {
+            case "string": return "String";
+            case "int32": return "Integer";
+            case "float": return "float";
+            default:
+                return typeName;
+        }
+    }
 }
